@@ -91,7 +91,7 @@ const run = async () => {
     })
 
     client.on('group_join', async notification => {
-        client.sendMessage(notification.id.remote, `Wellcome to Group!\n\nJangan lupa baca deskripsi group terlebih dahulu, dan semoga betah.\n\n-- wellcome-group by: aex-bot`)
+        client.sendMessage(notification.id.remote, `Wellcome to Group!\n\nJangan lupa baca deskripsi group terlebih dahulu, dan semoga betah.\n\n-- wellcome-group by: BOT STYLE`)
     })
 }
 
