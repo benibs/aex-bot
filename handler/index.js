@@ -55,7 +55,7 @@ const MessageHandler = async (client = new Client(), message) => {
         const isBotGroupAdmins = groupAdmins.includes(botNumber) || false
 
         const prefix = '!' || '#' || ''
-        const krisar = '6282299265151@c.us'  // pliese don't delete this variable.
+        const krisar = '6282114499086@c.us'  // pliese don't delete this variable.
 
         const date = (time) => moment(time * 1000).format('DD/MM/YY HH:mm:ss')
 
