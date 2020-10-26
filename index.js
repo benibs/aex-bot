@@ -25,7 +25,7 @@ const start = (client = new Client()) => {
             .then((ids) => {
                 console.log(`[+] Invited to Group. [ ${name} : ${ids.length}]`)
                 let _id = id.split('-')
-                let msg = `Thanks for adding us.\n\n-----\n\nGroup Name: *${name}*\nId: *${_id[1].split('@')[0]}*\nOwner: @${_id[0]}\n\n-----\nregards: *aex-bot*`
+                let msg = `Thanks for adding us.\n\n-----\n\nGroup Name: *${name}*\nId: *${_id[1].split('@')[0]}*\nOwner: @${_id[0]}\n\n-----\nregards: *BOT_STYLE*`
                 client.sendTextWithMentions(id, msg)
             }))
 
@@ -34,6 +34,6 @@ const start = (client = new Client()) => {
     })
 }
 
-create('aex-bot', options(false, start))
+create('BOT_STYLE', options(false, start))
     .then((client) => start(client))
     .catch((err) => new Error(err))
