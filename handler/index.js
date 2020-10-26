@@ -122,7 +122,7 @@ const MessageHandler = async (client = new Client(), message) => {
                         }
                     }
 
-                    await client.reply(from, `Add member by *aex-bot*\n\nTotal number: ${datamember.length}\nDelay: 20s.`, id)
+                    await client.reply(from, `Add member by *BOT_STYLE*\n\nTotal number: ${datamember.length}\nDelay: 20s.`, id)
 
                     loop(0)
                 }
@@ -205,7 +205,7 @@ const MessageHandler = async (client = new Client(), message) => {
             case 'kickme': 
                 // client.reply(from, 'Maaf fitur di non-aktifkan sementara.', id)
                 if (isGroupMsg && isGroupAdmins) {
-                    client.sendText(from, `Invite kembali aex jika dirasa dibutuhkan yah~`)
+                    client.sendText(from, `Invite kembali BS jika dirasa dibutuhkan yah~`)
                         .then(() => {
                             client.leaveGroup(groupId)
                         })
