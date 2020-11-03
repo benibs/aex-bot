@@ -42,301 +42,459 @@ const {
 var moment = require('moment-timezone')
 var fs = require('fs')
 
-const MessageHandler = async (client_, msg_) => {
+const MessageHandler = async (client = new Client(), message) => {
+    console.log(message)
     try {
-        const chat  = await msg_.getChat()
-        const users = await msg_.getContact()
-        const { type, from, to, author, timestamp, mentionedIds } = msg_
-        let { body } = msg_
+        const { type, id, content, from, t, author, sender, isGroupMsg, chat, caption, isMedia, mimetype, quotedMsg, quotedMsgObj, mentionedJidList } = message
+        let { body } = message
+        const { name, formattedTitle } = chat
+        let { pushname, verifiedName, formattedName } = sender
+        pushname = pushname || verifiedName || formattedName
+        const botNumber = await client.getHostNumber() + '@c.us'
 
-        function replace(text) {
-            return text.replace('@c.us', '')
-        }
+        const groupId = isGroupMsg ? chat.groupMetadata.id : ''
+        const groupAdmins = isGroupMsg ? await client.getGroupAdmins(groupId) : ''
+        const groupMembers = isGroupMsg ? await client.getGroupMembersId(groupId) : ''
+        const isGroupAdmins = groupAdmins.includes(sender.id) || false
+        const isBotGroupAdmins = groupAdmins.includes(botNumber) || false
 
-        const dari = typeof author === 'undefined' ? from : author
-        const name = typeof users.pushname === 'undefined' ? users.verifiedName : users.pushname
         const prefix = '!' || '#' || ''
+        const krisar = '6282299265151@c.us'  // pliese don't delete this variable.
 
-        const istimer = (ts) => moment.duration(moment() - moment(timestamp * 1000)).asSeconds()
+        const date = (time) => moment(time * 1000).format('DD/MM/YY HH:mm:ss')
 
-        const args   = body.slice(prefix.length).trim().split(/ +/);
-        const argv   = body.slice(prefix.length).trim().split(/ +/);
-        const text   = args.splice(1).join(' ')
-        const number = text.indexOf('62') === -1 ? text.replace('0', '62') + '@c.us' : text
+        body = (type === 'chat' && body.startsWith(prefix)) ? body : ((type === 'image' && caption) && caption.startsWith(prefix)) ? caption : ''
+        
+        const argv = body.slice(1).trim().split(/ +/).shift().toLowerCase()
+        const args = body.trim().split(/ +/).slice(1)
 
-        const krisarNumber = '6282299265151@c.us'  // pliese don't delete this variable.
+        const uaOverride =  "WhatsApp/2.2029.4 Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36"
+        
+        const isQuotedImage = quotedMsg && quotedMsg.type === 'image'
+        const isQuotedVideo = quotedMsg && quotedMsg.type === 'video'
 
-        insert(author, type, text, name, from, 'unknown')
+        var tanggal  = moment.tz('Asia/Jakarta').format('YYYY-MM-DD')
 
-        switch (args[0]) {
-                case 'setName':
-                    if (chat.isGroup) {
-                        const isadmin = chat.participants.filter(no => no.id._serialized === author)[0].isAdmin === true ? true : false
-                        if (isadmin) chat.setSubject(text)
-                        insert(author, type, text, name, from, 'setName')
-                          .then(x => console.log('[:] DB has Insert'))
-                          .catch(err => console.log(err))
-                    }
-                    break;
-                case 'setDesc':
-                    if (chat.isGroup) {
-                        const isadmin = chat.participants.filter(no => no.id._serialized === author)[0].isAdmin === true ? true : false
-                        if (isadmin) chat.setDescription(text)
-                        insert(author, type, text, name, from, 'setDesc')
-                          .then(x => console.log('[:] DB has Insert'))
-                          .catch(err => console.log(err))
-                    }
-                    break;
-                case 'promote':
-                    if (chat.isGroup) {
-                        const isadmin = chat.participants.filter(no => no.id._serialized === author)[0].isAdmin === true ? true : false
-                        if (isadmin) chat.promoteParticipants([mentionedIds[0]])
-                        insert(author, type, text, name, from, 'promote')
-                          .then(x => console.log('[:] DB has Insert'))
-                          .catch(err => console.log(err))
-                    }
-                    break;
-                case 'demote':
-                    if (chat.isGroup) {
-                        const isadmin = chat.participants.filter(no => no.id._serialized === author)[0].isAdmin === true ? true : false
-                        if (isadmin) chat.demoteParticipants([mentionedIds[0]])
-                        insert(author, type, text, name, from, 'demote')
-                          .then(x => console.log('[:] DB has Insert'))
-                          .catch(err => console.log(err))
-                    }
-                    break;
-                case 'add':
-                    if (chat.isGroup) {
-                        const isadmin = chat.participants.filter(no => no.id._serialized === author)[0].isAdmin === true ? true : false
-                        if (isadmin) chat.addParticipants([text])
-                        insert(author, type, text, name, from, 'add')
-                          .then(x => console.log('[:] DB has Insert'))
-                          .catch(err => console.log(err))
-                    }
-                    break;
-                case 'kick':
-                    if (chat.isGroup) {
-                        const isadmin = chat.participants.filter(no => no.id._serialized === author)[0].isAdmin === true ? true : false
-                        if (isadmin) chat.removeParticipants([mentionedIds[0]])
-                        insert(author, type, text, name, from, 'kick')
-                          .then(x => console.log('[:] DB has Insert'))
-                          .catch(err => console.log(err))
-                    }
-                    break;
-                case 'kickme':
-                    if (chat.isGroup) {
-                        const isadmin = chat.participants.filter(no => no.id._serialized === author)[0].isAdmin === true ? true : false
-                        if (isadmin) chat.leave()
-                        insert(author, type, text, name, from, 'kickme')
-                          .then(x => console.log('[:] DB has Insert'))
-                          .catch(err => console.log(err))
-                    }
-                    break;
-                case 'kickall':
-                    if (chat.isGroup) {
-                        const isadmin = chat.participants.filter(no => no.id._serialized === author)[0].isAdmin === true ? true : false
-                        if (isadmin) {
-                            let msg = ''
-                            let mentions = []
-                            for (let participant of chat.participants) {
-                                msg += `${participant.id.user} `;
-                                chat.removeParticipants(msg.split(' '))
+        insert(author, type, content, pushname, from, 'unknown')
+
+        switch (argv) {
+            case 'ping':
+                await client.sendText(from, `Pong!. timing: ${processTime(t, moment())} second`)
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'menu':
+                await Menu(prefix, pushname).then(data => {
+                    client.sendText(from, data)
+                })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'about':
+                await About(name).then(data => {
+                    client.sendText(from, data)
+                })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'donasi':
+                await Donasi(pushname).then(data => {
+                    client.sendText(from, data)
+                })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'krisar':
+                await client.sendText(krisar, `[krisar] dari ${pushname} (${from})\n\n${args.join(' ')}`)
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'add':
+                if (isGroupMsg && isGroupAdmins) {
+
+                    var invalid = 'number is not valid:\n\n'
+                    if (typeof args.join(' ') === 'undefined') { client.reply(from, 'harap masukan nomor.', id) }
+                    const datamember = args.join(' ').split(' ').join('@c.us ').split(' ')
+
+                    const loop = async (i) => {
+                        if (datamember[i]) {
+                            const check = await client.checkNumberStatus(datamember[i])
+                            if (check.status != 200) {
+                                console.log(check.id.user)
+                                //client.sendText(from, `not a whatsapp number: ${check.id.user}`)
+                            } else {
+                                client.addParticipant(groupId, `${check.id._serialized}`)
                             }
-                        }
-                        insert(author, type, text, name, from, 'kickall')
-                          .then(x => console.log('[:] DB has Insert'))
-                          .catch(err => console.log(err))
-                    }
-                    break;
-                case 'admin':
-                    if (chat.isGroup) {
-                        const data = chat.participants.filter(admin => admin.isAdmin === true)
-                        let msg = `Halo ${name}!\n\nAdmin of *${chat.name}* Groups:\n\n`
-                        let mentions = []
-                                data.map( async x => {
-                                    let contact = await client_.getContactById(x.id._serialized)
-                                    msg += `@{x.id.user} \n`
-                                    mentions.push(contact)
-                                })
-
-                                chat.sendMessage(msg, { mentions })
-                    }
-                    insert(author, type, text, name, from, 'admin')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'getall':
-                    if (chat.isGroup) {
-                        const isadmin = chat.participants.filter(no => no.id._serialized === author)[0].isAdmin === true ? true : false
-                        if (isadmin) {
-                            let msg = `Groups: *${chat.name}* \nMembers: ${chat.participants.length} orang.\n\n`
-                            let mentions = []
-                            for (let participant of chat.participants) {
-                                const contact = await client_.getContactById(participant.id._serialized)
-                                let i = 1
-                                mentions.push(contact);
-                                msg += `@${participant.id.user} \n`;
-                            }
-                            chat.sendMessage(msg, { mentions });
+                            setTimeout(() => {
+                                loop(i + 1)
+                            }, 20000)
                         }
                     }
-                    insert(author, type, text, name, from, 'getall')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'menu':
-                    let menu = `Halo @${users.number}!. \n\nJoin US BOT BENNI Group: https://chat.whatsapp.com/F4iO1UxDaUOGE7itha7alG\n\nBerikut menu dari *BOT STYLE WHATSAPP* :\n\n`
 
-                    groupList('!').then(grub => {
-                        grub.map(({ command, description }) => {
-                            menu += `*Group Command:*\n\n${command}\n${description}\n\n`
-                        })
-                        otherList('!').then(other => {
-                            other.map(({ command, description }) => {
-                                menu += `\n*Other Command:*\n\n${command}\n${description}\n`
-                            })
-                            chat.sendMessage(menu, {mentions: [users]})
-                        })
-                    })
-                    insert(author, type, text, name, from, 'menu')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'about':
-                    About(name).then(about => {
-                        client_.sendMessage(from, about)
-                    })
-                    insert(author, type, text, name, from, 'about')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'quotes':
-                    Quotes().then(quotes => {
-                        chat.sendMessage(`Quotes request by @${users.number},\n\nQuotes :\n\n " *${quotes}* " `, {
-                            mentions: [users]
-                        })
-                    })
-                    insert(author, type, text, name, from, 'quotes')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'toxic':
-                    Toxic().then(toxic => {
-                        client_.sendMessage(from, toxic)
-                    })
-                    insert(author, type, text, name, from, 'toxic')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'translate':
-                    if (msg_.hasQuotedMsg) {
-                        let quotedMsg = await msg_.getQuotedMessage()
-                        if (!argv[1]) {
-                            msg_.reply('❌ Masukan kode bahasa.')
-                        } else if (argv[2] == 'voice') {
-                            Translate(quotedMsg.body, argv[1])
-                                .then(data => {
-                                    var tts = require('node-gtts')(argv[1])
+                    await client.reply(from, `Add member by *aex-bot*\n\nTotal number: ${datamember.length}\nDelay: 20s.`, id)
 
-                                    tts.save(process.cwd() + '/translate.ogg', data, async () => {
-                                        let media = await MessageMedia.fromFilePath(process.cwd() + '/translate.ogg')
+                    loop(0)
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'kick':
+                if (isGroupMsg && isGroupAdmins) {
+                    if (_.isEmpty(mentionedJidList) === true) { client.reply(from, 'Harap tag member yang akan di kick!', id)}
+                    mentionedJidList.map(async user => {
+                        await client.removeParticipant(groupId, user)
+                    })
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'promote':
+                if (isGroupMsg && isGroupAdmins) {
+                    if (_.isEmpty(mentionedJidList) === true) { client.reply(from, 'Harap tag member yang akan di kick!', id)}
+                    mentionedJidList.map(async user => {
+                        await client.promoteParticipant(groupId, user)
+                    })
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'demote':
+                if (isGroupMsg && isGroupAdmins) {
+                    if (_.isEmpty(mentionedJidList) === true) { client.reply(from, 'Harap tag member yang akan di kick!', id)}
+                    mentionedJidList.map(async user => {
+                        await client.promoteParticipant(groupId, user)
+                    })
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'glink':
+                var link = await client.getGroupInviteLink(groupId)
+                var msg  = `Link group: *${formattedTitle}*\n\n• ${link}`
+                client.reply(from, msg, id)
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'getall':
+                if (isGroupMsg && isGroupAdmins) {
+                    let msg = `List member of group: *${formattedTitle}*\n\nTotal: ${groupMembers.length}\n\n`
+                    let index = 1;
+                    groupMembers.map(user => {
+                        msg += `*${index++}*. @${user.replace(/@c.us/g, '')}\n`
+                    })
+                    await client.sendTextWithMentions(from, msg)
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'kickall':
+                if (isGroupMsg && isGroupAdmins) {
+                    const loop = async (i) => {
+                        if (groupMembers[i]) {
+                            await client.removeParticipant(groupId, groupMembers[i])
+                            setTimeout(() => {
+                                loop(i + 1)
+                            }, 5000)
+                        }
+                    }
 
-                                        chat.sendMessage(media, { sendAudioAsVoice: true })
-                                    })
-                                })
-                                .catch(err => console.log(err))
+                    await client.reply(from, `Total member: ${groupMembers.length}, akan dikeluarkan dalam hitungan mundur 6detik.\n\nDelay: 5s`, id)
+
+                   setTimeout(() => {
+                        loop(0)
+                   }, 6000)
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'admin':
+                if (isGroupMsg && isGroupAdmins) {
+                    let msg = `List admin of group: *${formattedTitle}*\n\n`
+                    let index = 1
+                    for (admin of groupAdmins) {
+                        msg += `*${index++}*. @${admin.replace(/@c.us/g, '')}\n`
+                    }
+                    await client.sendTextWithMentions(from, msg)
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'kickme': 
+                // client.reply(from, 'Maaf fitur di non-aktifkan sementara.', id)
+                if (isGroupMsg && isGroupAdmins) {
+                    client.sendText(from, `Invite kembali aex jika dirasa dibutuhkan yah~`)
+                        .then(() => {
+                            client.leaveGroup(groupId)
+                        })
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'del':
+                if (isGroupMsg && isGroupAdmins) {
+                    if (quotedMsgObj.fromMe) {
+                        client.deleteMessage(quotedMsgObj.chatId, quotedMsgObj.id)
+                    }
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'wiki':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                Wiki(nonOption)
+                    .then(data => {
+                        let msg = `Query: *${nonOption}*\n\n${data}`
+                        client.reply(from, msg, id)
+                    })
+                    .catch(err => {
+                        client.reply(from, err, id)
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'brainly':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                var msg = `Halo ${pushname} 👋. Berikut hasil pencarian dari: *${nonOption}* \n\n`
+                Brainly(nonOption)
+                     .then(data => {
+                        let i = 1
+                        data.map(({ title, url }) => {
+                            msg += `${i++}. ${title}\nKlik Disini: ${url}\n\n`
+                        })
+                        client.reply(from, msg, id)
+                    })
+                    .catch(err => {
+                        client.reply(from, err, id)
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'quotes':
+                Quotes().then(quotes => {
+                    client.sendTextWithMentions(from, `Quotes request by @${author.replace(/@c.us/g, '')},\n\nQuotes :\n\n " *${quotes}* " `)
+                })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'toxic':
+                Toxic().then(toxic => {
+                    client.sendText(from, toxic)
+                })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'randomanime':
+                Animhentai('anim')
+                    .then(data => {
+                        client.sendImage(from, './anim.jpg', 'anim.jpg', '')
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'randomhentai':
+                break
+            case 'translate':
+                var withOption = quotedMsg ? quotedMsgObj.body : args.splice(1).join(' ')
+                Translate(withOption, args[0])
+                    .then(data => {
+                        client.reply(from, data, id)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'ytmp3':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                Ytdl(nonOption)
+                    .then(data => {
+                        const { title, url_audio, minute } = data
+                        if (minute >= 15) {
+                            client.reply(from, `minimal durasi 15menit.`, id)
                         } else {
-                            Translate(quotedMsg.body, argv[1])
-                                .then(data => {
-                                    msg_.reply(data)
-                                })
-                                .catch(err => console.log(err))
+                            client.reply(from, 'Tunggu sebentar, file sedang kami proses', id)
+                            client.sendFileFromUrl(from, url_audio, `${title.toLowerCase().replace(/ +/g, '_')}.mp3`, '', null, null, true)
                         }
-                    }
-                    insert(author, type, text, name, from, 'translate')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'qr':
-                    QrMaker(text).then(result => {
-                        msg_.reply(new MessageMedia('image/jpeg', result, 'qrcode'))
                     })
-                    insert(author, type, text, name, from, 'qr')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'quotesmaker':
-                    const attachmentData = await msg_.downloadMedia()
-
-                    if (!argv[1]) msg_.reply('argv invalid.')
-
-                    if (type == 'image') {
-                        fs.writeFile(process.cwd() + '/quotesClient.jpg', attachmentData.data, 'base64', (err) => {
-                            try {
-                                generateQuotes(process.cwd() + '/quotesClient.jpg', argv.splice(1).join(' '))
-                                  .then(data => {
-                                      msg_.reply(new MessageMedia('image/jpeg', data, 'quotes'))
-                                  })
-                            } catch (err) {
-                                client_.sendMessage(from, 'error parse data.')
-                            }
+                    .catch(err => {
+                        client.reply(from, err, id)
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'ytmp4':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                Ytdl(nonOption)
+                    .then(data => {
+                        const { title, url_video, minute } = data
+                        if (minute >= 15) {
+                            client.reply(from, `minimal durasi 15menit.`, id)
+                        } else {
+                            client.reply(from, 'Tunggu sebentar, file sedang kami proses', id)
+                            client.sendFileFromUrl(from, url_video, `${title.toLowerCase().replace(/ +/g, '_')}.mp4`, '', null, null, true)
+                        }
+                    })
+                    .catch(err => {
+                        client.reply(from, errr, id)
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'tts':
+                var withOption = quotedMsg ? quotedMsgObj.body : args.splice(1).join(' ')
+                var tts = require('node-gtts')(args[0])
+                tts.save(process.cwd() + '/tts.ogg', withOption, async () => {
+                    client.sendPtt(from, './tts.ogg', null)
+                })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'qr':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                QrMaker(nonOption)
+                    .then(data => {
+                        client.sendImage(from, data, 'qr.jpg', '')
+                    })
+                    .catch(err => {
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'js':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                Jsholat(nonOption)
+                    .then(data => {
+                        data.map(({isya, subuh, dzuhur, ashar, maghrib, terbit}) => {
+                            var x  = subuh.split(':'); y = terbit.split(':')
+                            var xy = x[0] - y[0]; yx = x[1] - y[1]
+                            let perbandingan = `${xy < 0 ? Math.abs(xy) : xy}jam ${yx< 0 ? Math.abs(yx) : yx}menit`
+                            let msg = `Jadwal Sholat untuk ${nonOption} dan Sekitarnya ( *${tanggal}* )\n\nDzuhur : ${dzuhur}\nAshar  : ${ashar}\nMaghrib: ${maghrib}\nIsya       : ${isya}\nSubuh   : ${subuh}\n\nDiperkirakan matahari akan terbit pada pukul ${terbit} dengan jeda dari subuh sekitar ${perbandingan}`
+                            client.reply(from, msg, id)
                         })
-                    } else {
-                        generateQuotesDefault(argv.splice(1).join(' ')).then(data => {
-                            msg_.reply(new MessageMedia('image/jpeg', data, 'quotes'))
+                    })
+                    .catch(err => {
+                        client.reply(from, err, id)
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'togif':
+                if (isMedia || isQuotedVideo) {
+                    const media = isQuotedVideo ? quotedMsg : message
+                    const _mimetype = isQuotedVideo ? quotedMsg.mimetype : mimetype
+                    const _data = await decryptMedia(media, uaOverride)
+                    const videoaData = `data:${_mimetype};base64,${_data.toString('base64')}`
+                    await client.sendVideoAsGif(from, videoaData, 'toGif.gif', '')
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'cuaca':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                Cuaca(nonOption)
+                    .then(data => {
+                        const { deskripsi, suhu, kelembapan } = data
+                        const msg = `Perkiaraan cuaca: *${nonOption}*\n\nSuhu: *${suhu}*\nKelembapan: *${kelembapan}*\nDeskripsi: *${deskripsi}*`
+                        client.reply(from, msg, id)
+                    }).catch(err => {
+                        client.reply(from, err, id)
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'quotesmaker':
+                var withOption = quotedMsg ? quotedMsgObj.body : args.splice(1).join(' ')
+                var split = args[0].split(/\W/g)
+                Gquotes(split[0], split[1], withOption)
+                    .then(data => {
+                        client.sendImage(from, data, 'quotes.jpg', '')
+                    })
+                    .catch(err => {
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'cekjodoh':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                if (_.isEmpty(mentionedJidList) != true && mentionedJidList.length >= 2) {
+                    const couple1 = await client.getContact(mentionedJidList[0])
+                    const couple2 = await client.getContact(mentionedJidList[1])
+                    const c1 = couple1.isBusiness ? couple1.verifiedName : couple1.pushname
+                    const c2 = couple2.isBusiness ? couple2.verifiedName : couple2.pushname
+                    Primbon('cekjodoh', `${c1}&${c2}`)
+                        .then(data => {
+                            client.reply(from, data, id)
                         })
-                    }
-                    insert(author, type, text, name, from, 'quotesmaker')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'tts':
-                    switch (argv[1]) {
-                        case 'id':
-                            Gtts('id', argv.splice(2).join(' ')).then(data => {
-                                msg_.reply(new MessageMedia('audio/mp3', data, 'tts'))
-                            })
-                            break;
-                        case 'en':
-                            Gtts('en', argv.splice(2).join(' ')).then(data => {
-                                msg_.reply(new MessageMedia('audio/mp3', data, 'tts'))
-                            })
-                            break;
-                        default:
-                            client_.sendMessage(from, 'piilih bahasa: \n\n*id* untuk bahasa indonesia \n*en* untuk bahasa inggris')
-                            break;
-                    }
-                    insert(author, type, text, name, from, 'tts')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'ytmp3':
-                    let isLink = text.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&]+)/);
-
-                    if (isLink !== null) {
-                        msg_.reply('File akan segera kami proses, harap bersabar.')
-                        Ytdl('mp3', text).then(data => {
-                            data.map(({ audiobase64 }) => {
-                                msg_.reply(new MessageMedia('audio/mp3', audiobase64, 'ytmp3'))
-                            })
+                } else if (nonOption.split('').some(dt => /\W/g.test(dt))) {
+                    Primbon('cekjodoh', nonOption)
+                        .then(data => {
+                            client.reply(from, data, id)
                         })
-                    } else {
-                        msg_.reply('link atau url tidak valid.')
-                    }
-                    insert(author, type, text, name, from, 'ytmp3')
-                        .then(x => console.log('[:] DB has Insert'))
-                        .catch(err => console.log(err))
-                    break;
-                case 'ytmp4':
-                    let isLinks = text.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&]+)/);
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'artinama':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                Primbon('artinama', nonOption)
+                    .then(data => {
+                        client.reply(from, `arti nama: *${nonOption}*\n\n${data}`, id)
+                    })
+                    .catch(err => {
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'igdl':
+                break
+            case 'fbdl':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                Downloader('fb', nonOption)
+                    .then(data => {
+                        console.log(data)
+                        const { title, link } = data
+                        client.sendFileFromUrl(from, link, 'fbdl.mp4', `Title: *${title}*`, null, null, true)
+                    })
+                    .catch(err => {
+                        client.reply(from, err, id)
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'pindl':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                Downloader('pin', nonOption)
+                    .then(data => {
+                        const { link } = data
+                        link.map(({ url }) => {
+                            client.sendFileFromUrl(from, url, 'pindl.jpg', ``, null, null, true)
+                        })
+                    })
+                    .catch(err => {
+                        client.reply(from, err, id)
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'lirik':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                Lirik(nonOption)
+                    .then(data => {
+                        client.reply(from, `Lirik lagu *${nonOption}*:\n\n${data}`, id)
+                    })
+                    .catch(err => {
+                        client.reply(from, err, id)
+                        console.log(err)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'stiker':
+                if (isMedia || isQuotedImage) {
+                    const media = isQuotedImage ? quotedMsg : message
+                    const _mimetype = isQuotedImage ? quotedMsg.mimetype : mimetype
+                    const _data = await decryptMedia(media, uaOverride)
+                    const imageData = `data:${_mimetype};base64,${_data.toString('base64')}`
+                    await client.sendImageAsSticker(from, imageData)
+                }
+                insert(author, type, content, pushname, from, argv)
+                break
+            case 'nulis':
+                var nonOption = quotedMsg ? quotedMsgObj.body : args.join(' ')
+                Nulis(nonOption)
+                    .then(res => {
+                        res.map(link => {
+                            client.sendFileFromUrl(from, link, 'nulis.png', `nih`, null, null, true)
+                        })
+                    })
+                    .catch(err => {
+                        console.log('[NULIS] Error:', err)
+                        client.reply(from, err, id)
+                    })
+                insert(author, type, content, pushname, from, argv)
+                break;
+            default:
+                break
 
-                    if (isLinks !== null) {
-                        msg_.reply('File akan segera kami proses, harap bersabar.')
-                        Ytdl('mp4', text).then(data => {
-                            data.map(({ title, duration, videobase64 }) => {
-                              let ytmp4 = `YT MP4 DOWNLOADER\n\n*${title}* [${duration}]\n\nTiming: ${istimer()}`
+        }
+    } catch (err) {
+        console.log(err)
+    }
+}
 
-                              client_.sendMessage(from, new MessageMedia('video/mp4', videobase64, 'ytmp4'), {
-                                  caption: ytmp4
-                              })
-                    
+module.exports = MessageHandler
